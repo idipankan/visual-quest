@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-server
+.env
+.env.*
+!.env.example
+.git
+*.log
+Design proposal
+tsconfig.tsbuildinfo
