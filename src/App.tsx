@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, ReactNode, RefObject } from 'react'
-import { CHALLENGES, difficultyLabel } from './data/challenges'
+import { difficultyLabel } from './data/challenges'
 import type { Difficulty } from './data/challenges'
 import { useCamera } from './hooks/useCamera'
 import { ServerJevClient, ResponseValidationError, fetchJevAvailability } from './services/jev'
@@ -18,7 +18,9 @@ import {
 } from './utils/captureFrame'
 import type { CapturedFrame } from './utils/captureFrame'
 import { toBoxPercentages } from './utils/boxCoordinates'
-import { MAX_CHALLENGE_POINTS, calculatePoints, evaluatePresence } from './utils/scoring'
+import { calculatePoints, evaluatePresence } from './utils/scoring'
+import { createRound, GAME_MODES, maximumRoundScore, ROUND_LENGTH } from './utils/gameRound'
+import type { GameMode } from './utils/gameRound'
 import {
   JEV_MODEL,
   MIRROR_CAPTURED_FRAME,
@@ -41,12 +43,6 @@ const levelTagClass: Record<Difficulty, string> = {
   hard: 'tag tag-outline',
 }
 
-// Upper bound per challenge: strongest match band (+14) and best box confidence (+5).
-const MAX_SCORE = CHALLENGES.reduce(
-  (sum, challenge) => sum + Math.min(MAX_CHALLENGE_POINTS, challenge.basePoints + 14 + 5),
-  0,
-)
-
 const isBusy = (state: InvestigationState): boolean =>
   isInvestigationRunning(state)
 
@@ -58,8 +54,8 @@ function humanizeCategory(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
-function rankFor(score: number): { rank: string; blurb: string } {
-  const ratio = MAX_SCORE ? score / MAX_SCORE : 0
+function rankFor(score: number, maxScore: number): { rank: string; blurb: string } {
+  const ratio = maxScore ? score / maxScore : 0
   if (ratio >= 0.85) {
     return { rank: 'Master of Common Sense', blurb: 'Unmistakable instincts. Jev is taking notes on you.' }
   }
@@ -296,6 +292,9 @@ function App() {
   const [challengeIndex, setChallengeIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [isFinished, setIsFinished] = useState(false)
+  const [mode, setMode] = useState<GameMode>('progressive')
+  const [round, setRound] = useState(() => createRound('progressive'))
+  const [gameStarted, setGameStarted] = useState(false)
   const [jevReady, setJevReady] = useState(false)
   const [hasConsent, setHasConsent] = useState(false)
   const [consentDeclined, setConsentDeclined] = useState(false)
@@ -303,10 +302,11 @@ function App() {
   const frameUrl = useRef<string | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const challenge = CHALLENGES[challengeIndex]
+  const challenge = round[challengeIndex]
+  const maxScore = maximumRoundScore(round)
   const frame = currentFrame(investigation)
   const busy = isBusy(investigation)
-  const isLastMission = challengeIndex >= CHALLENGES.length - 1
+  const isLastMission = challengeIndex >= round.length - 1
 
   const client = new ServerJevClient()
 
@@ -463,7 +463,7 @@ function App() {
       stopCamera()
       dispatch({ type: 'RESET', cameraReady: false })
       setIsFinished(true)
-      setAnnouncement('Case file closed. See your final score.')
+      setAnnouncement('Quest complete. See your final score.')
       return
     }
     setChallengeIndex((index) => index + 1)
@@ -473,11 +473,22 @@ function App() {
 
   const resetGame = () => {
     disposeFrame()
+    stopCamera()
     setScore(0)
     setChallengeIndex(0)
     setIsFinished(false)
-    dispatch({ type: 'RESET', cameraReady: cameraStream !== null })
-    setAnnouncement('Game reset. Mission one is ready.')
+    setGameStarted(false)
+    dispatch({ type: 'RESET', cameraReady: false })
+    setAnnouncement('Choose a mode to start a new quest.')
+  }
+
+  const startGame = () => {
+    setRound(createRound(mode))
+    setChallengeIndex(0)
+    setScore(0)
+    setIsFinished(false)
+    setGameStarted(true)
+    setAnnouncement(`New ${mode} quest ready. Mission one of ${ROUND_LENGTH}.`)
   }
 
   const onDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -529,7 +540,7 @@ function App() {
     : cameraConnected
       ? 'jvq-status-dot--live'
       : ''
-  const rank = rankFor(score)
+  const rank = rankFor(score, maxScore)
   const gatePct = `${Math.round(PROTOTYPE_PRESENCE_THRESHOLD * 100)}%`
 
   return (
@@ -538,8 +549,8 @@ function App() {
 
       <header className="nav jvq-nav">
         <div className="jvq-brand">
-          <span className="nav-brand">Jev Vision Quest</span>
-          <span className="jvq-brand-sub">Field Bureau of Common Sense</span>
+          <span className="nav-brand">SpotQuest</span>
+          <span className="jvq-brand-sub">An AI-powered scavenger hunt</span>
         </div>
         <div className="jvq-pill jvq-navextra">
           <span className={`jvq-dot ${jevReady ? 'jvq-dot--on' : ''}`} />
@@ -553,24 +564,52 @@ function App() {
           <span>Presence gate {gatePct}</span>
         </div>
         <div className="jvq-score">
-          <span className="jvq-kicker">Case score</span>
+          <span className="jvq-kicker">Score</span>
           <span className="jvq-score-value">{score.toLocaleString('en-US')}</span>
         </div>
       </header>
 
-      {isFinished ? (
+      {!gameStarted ? (
+        <main className="jvq-setup">
+          <div className="jvq-kicker">Everyday objects. Unexpected missions.</div>
+          <h1>What will you spot today?</h1>
+          <p>Find an object that fits the mission, take a photo or upload an image, and let Jev judge the match.</p>
+          <fieldset className="jvq-modes">
+            <legend>Choose your mode</legend>
+            {GAME_MODES.map((option) => (
+              <label className="jvq-mode" key={option.value}>
+                <input
+                  checked={mode === option.value}
+                  name="game-mode"
+                  onChange={() => setMode(option.value)}
+                  type="radio"
+                  value={option.value}
+                />
+                <span>
+                  <strong>{option.label}</strong>
+                  <span>{option.description}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <p className="jvq-setup-note">{ROUND_LENGTH} random missions per quest. 150 challenges to explore. No repeats within a quest.</p>
+          <button className="btn btn-primary" disabled={!hasConsent} onClick={startGame} type="button">
+            Start quest
+          </button>
+        </main>
+      ) : isFinished ? (
         <section className="jvq-end jvq-fade">
-          <div className="jvq-end-kicker">Case file closed</div>
+          <div className="jvq-end-kicker">Quest complete</div>
           <h1>Nice work, detective.</h1>
-          <p className="text-muted">You worked every lead in this slice of the field. Here&rsquo;s how the bureau reads your eye.</p>
+          <p className="text-muted">You explored every mission. Here&rsquo;s how your eye for everyday objects measures up.</p>
           <div className="jvq-end-cards">
             <div className="jvq-end-card">
               <div className="jvq-kicker">Total score</div>
               <div className="jvq-end-total">{score.toLocaleString('en-US')}</div>
-              <small className="text-muted">of {MAX_SCORE.toLocaleString('en-US')} possible</small>
+              <small className="text-muted">of {maxScore.toLocaleString('en-US')} possible</small>
             </div>
             <div className="jvq-end-card jvq-end-card--rank">
-              <div className="jvq-kicker">Field rank</div>
+              <div className="jvq-kicker">Quest rank</div>
               <div className="jvq-end-rank">{rank.rank}</div>
               <small className="text-muted">{rank.blurb}</small>
             </div>
@@ -584,24 +623,25 @@ function App() {
         <main className="jvq-main">
           <section aria-label="Current mission" className="jvq-mission">
             <div className="jvq-mission-top">
+              <span className="jvq-round-mode">{mode === 'progressive' ? 'Progressive' : difficultyLabel(mode)} mode</span>
               <span className={levelTagClass[challenge.difficulty]}>{difficultyLabel(challenge.difficulty)}</span>
               <span className="jvq-case">
-                Case {String(challengeIndex + 1).padStart(2, '0')} / {String(CHALLENGES.length).padStart(2, '0')}
+                Mission {String(challengeIndex + 1).padStart(2, '0')} / {String(round.length).padStart(2, '0')}
               </span>
             </div>
             <div
-              aria-label={`Mission ${challengeIndex + 1} of ${CHALLENGES.length}`}
+              aria-label={`Mission ${challengeIndex + 1} of ${round.length}`}
               className="jvq-progress"
               role="img"
             >
-              <span style={{ width: `${Math.round((challengeIndex / CHALLENGES.length) * 100)}%` }} />
+              <span style={{ width: `${Math.round((challengeIndex / round.length) * 100)}%` }} />
             </div>
 
             <h1 className="jvq-title">{challenge.title}</h1>
             <p className="jvq-prompt">{challenge.mission}</p>
 
             <div className="jvq-tip">
-              <div className="jvq-kicker">Field tip</div>
+              <div className="jvq-kicker">Hint</div>
               <p className="text-muted">{challenge.hint}</p>
             </div>
 
@@ -824,7 +864,7 @@ function App() {
       )}
 
       <footer className="jvq-footer">
-        <span>Jev Vision Quest · a field exercise in visual common sense</span>
+        <span>SpotQuest · Powered by Jev</span>
         <span>Jev treats every probability as a hint, never a certainty. · Model {JEV_MODEL}</span>
       </footer>
 
@@ -836,7 +876,7 @@ function App() {
           title="Before you start: image data & privacy"
         >
           <p className="dialog-body">
-            Jev Vision Quest sends the photos you capture or upload to TypeSafe servers for processing.
+            SpotQuest sends the photos you capture or upload to TypeSafe servers for processing.
             TypeSafe does not reuse your images for training, but may store them temporarily for
             security reasons.
           </p>

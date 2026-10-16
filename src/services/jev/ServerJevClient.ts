@@ -50,7 +50,7 @@ export class ServerJevClient implements JevClient {
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new JevRequestError('The analysis timed out. Try again with a smaller or clearer image.')
       }
-      throw new JevRequestError('The Jev Vision Quest server could not be reached. Check your connection and retry.')
+      throw new JevRequestError('The SpotQuest server could not be reached. Check your connection and retry.')
     } finally {
       window.clearTimeout(timeout)
     }

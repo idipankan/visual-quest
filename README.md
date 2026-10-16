@@ -1,6 +1,19 @@
-# Jev Vision Quest
+# SpotQuest
 
-A React + TypeScript visual common-sense game powered by Jev. Find an object that fits a mission, capture one webcam frame (or upload a JPG/PNG), and investigate it. Jev returns typed judgments; the app decides what to display and how many points to award.
+An AI-powered scavenger hunt built with React + TypeScript and powered by Jev. Find an everyday object that fits a mission, capture one webcam frame (or upload a JPG/PNG), and investigate it. Jev returns typed judgments; the app decides what to display and how many points to award.
+
+The mission and hint come before the camera or image on mobile, so players know what to look for before capturing a photo.
+
+## Game modes
+
+Choose a mode before starting a quest. Each quest draws **10 unique random challenges** from a shared catalogue of **150** (50 per difficulty).
+
+- **Easy:** 10 Easy challenges about familiar objects.
+- **Medium:** 10 Medium challenges about object functions, materials, and context.
+- **Hard:** 10 Hard challenges focused on relationships, arrangements, and scenes.
+- **Progressive:** 4 Easy, then 3 Medium, then 3 Hard, randomized within each tier.
+
+The selected challenges stay fixed during the quest, including retries and skips. Skipping consumes one of the 10 missions. Reset or play again returns to mode selection; starting draws a fresh set (challenges may recur across separate quests). Final score limits and ranks use only the selected quest's challenges. The server validates every submitted challenge ID against the same full catalogue.
 
 The app is a React frontend plus a small Node/Express backend. **The TypeSafe API key lives only on the server**, read from the `TYPESAFE_API_KEY` environment variable. The browser never sees it.
 

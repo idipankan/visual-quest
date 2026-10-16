@@ -162,6 +162,6 @@ app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Jev Vision Quest listening on port ${PORT}`)
+  console.log(`SpotQuest listening on port ${PORT}`)
   if (!getApiKey()) console.warn('TYPESAFE_API_KEY is not set; /api/jev will return 503.')
 })

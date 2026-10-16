@@ -26,8 +26,9 @@
 
 .jvq-brand {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   margin-right: auto;
 }
 
@@ -38,8 +39,7 @@
 
 .jvq-brand-sub {
   font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--color-accent-700);
 }
 
@@ -105,10 +105,83 @@
 }
 
 /* mission */
+.jvq-setup {
+  max-width: 720px;
+  margin: var(--space-8) auto;
+}
+
+.jvq-setup h1 {
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 400;
+  line-height: 1.1;
+  margin: var(--space-3) 0;
+}
+
+.jvq-setup > p {
+  line-height: 1.6;
+}
+
+.jvq-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  margin: var(--space-6) 0;
+}
+
+.jvq-modes legend {
+  margin-bottom: var(--space-3);
+}
+
+.jvq-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.jvq-mode:has(input:checked) {
+  border-color: var(--color-accent-700);
+  background: var(--color-accent-100);
+}
+
+.jvq-mode:focus-within {
+  outline: 2px solid var(--color-accent-700);
+  outline-offset: 3px;
+}
+
+.jvq-mode input {
+  flex: none;
+  margin: 4px 0 0;
+  accent-color: var(--color-accent-700);
+}
+
+.jvq-mode strong,
+.jvq-mode span span {
+  display: block;
+}
+
+.jvq-mode span span,
+.jvq-setup-note {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: var(--space-1);
+}
+
+.jvq-round-mode {
+  font-size: 12px;
+  color: var(--color-accent-700);
+}
+
 .jvq-mission-top {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: var(--space-2);
 }
 
@@ -882,14 +955,6 @@
     gap: var(--space-4);
   }
 
-  .jvq-mission {
-    order: 2;
-  }
-
-  .jvq-viewport {
-    order: 1;
-  }
-
   .jvq-navextra {
     display: none !important;
   }
@@ -901,5 +966,11 @@
   .jvq-spinner,
   .jvq-fade {
     animation: none !important;
+  }
+
+  @media (max-width: 480px) {
+    .jvq-modes {
+      grid-template-columns: 1fr;
+    }
   }
 }
