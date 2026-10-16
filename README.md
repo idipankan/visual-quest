@@ -4,6 +4,7 @@ An AI-powered scavenger hunt built with React + TypeScript and powered by Jev. F
 
 The mission and hint come before the camera or image on mobile, so players know what to look for before capturing a photo.
 Once the camera is enabled, tap the shutter-style **Investigate** button at the bottom of the live preview to capture and analyze a single frame without scrolling away. The control is disabled while processing or when Jev is offline; uploaded images are still investigated automatically.
+The live camera preview and captured photos are both unmirrored, so left and right stay consistent when taking a snapshot and text is not reversed.
 
 ## Game modes
 
