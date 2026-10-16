@@ -7,19 +7,51 @@ import { createRound, GAME_MODES, maximumRoundScore, ROUND_LENGTH } from './game
 afterEach(() => vi.restoreAllMocks())
 
 describe('challenge catalogue', () => {
-  it('contains 150 unique, complete challenges, with 50 in each difficulty', () => {
-    expect(CHALLENGES).toHaveLength(150)
-    expect(new Set(CHALLENGES.map(({ id }) => id)).size).toBe(150)
-    expect(new Set(CHALLENGES.map(({ mission }) => mission)).size).toBe(150)
-    for (const difficulty of ['easy', 'medium', 'hard']) {
-      expect(CHALLENGES.filter((challenge) => challenge.difficulty === difficulty)).toHaveLength(50)
+  it('contains 1,000 unique, complete challenges across all three difficulties', () => {
+    expect(CHALLENGES).toHaveLength(1000)
+    for (const field of ['id', 'mission', 'localizationPrompt'] as const) {
+      expect(new Set(CHALLENGES.map((challenge) => challenge[field].trim().toLowerCase())).size).toBe(1000)
+    }
+    for (const [difficulty, count] of Object.entries({ easy: 350, medium: 350, hard: 300 })) {
+      expect(CHALLENGES.filter((challenge) => challenge.difficulty === difficulty)).toHaveLength(count)
     }
     for (const challenge of CHALLENGES) {
       for (const text of [challenge.id, challenge.title, challenge.mission, challenge.hint, challenge.localizationPrompt]) {
         expect(text.trim().length).toBeGreaterThan(0)
       }
+      expect(challenge.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
       expect(challenge.basePoints).toBeGreaterThan(0)
-      expect(buildJevRequest(challenge).request.questions).toHaveProperty('target')
+      expect(buildJevRequest(challenge).request.questions).toMatchObject({
+        presence: { instructions: expect.stringContaining(challenge.localizationPrompt) },
+        target: { instructions: expect.stringContaining(challenge.localizationPrompt) },
+        match: { instructions: expect.stringContaining(challenge.localizationPrompt) },
+        category: { instructions: expect.stringContaining(challenge.localizationPrompt) },
+      })
+    }
+  })
+
+  it('preserves the original opening challenges and their scoring', () => {
+    expect(CHALLENGES.slice(0, 12).map(({ id, difficulty, basePoints }) => ({ id, difficulty, basePoints }))).toEqual([
+      { id: 'rainy-day', difficulty: 'easy', basePoints: 100 },
+      { id: 'power-failure', difficulty: 'easy', basePoints: 100 },
+      { id: 'make-noise', difficulty: 'easy', basePoints: 100 },
+      { id: 'charge-device', difficulty: 'easy', basePoints: 110 },
+      { id: 'information', difficulty: 'medium', basePoints: 140 },
+      { id: 'unrelated-tech', difficulty: 'medium', basePoints: 140 },
+      { id: 'older-than-phone', difficulty: 'medium', basePoints: 150 },
+      { id: 'desk-imposter', difficulty: 'medium', basePoints: 160 },
+      { id: 'useful-pair', difficulty: 'hard', basePoints: 180 },
+      { id: 'out-of-place', difficulty: 'hard', basePoints: 190 },
+      { id: 'ready-to-write', difficulty: 'hard', basePoints: 180 },
+      { id: 'protect-fragile', difficulty: 'hard', basePoints: 200 },
+    ])
+  })
+
+  it('assigns the existing tier scores to all additional challenges', () => {
+    const scores = { easy: 100, medium: 150, hard: 190 }
+    expect(CHALLENGES.slice(150)).toHaveLength(850)
+    for (const challenge of CHALLENGES.slice(150)) {
+      expect(challenge.basePoints).toBe(scores[challenge.difficulty])
     }
   })
 })

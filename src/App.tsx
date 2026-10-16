@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, ReactNode, RefObject } from 'react'
-import { difficultyLabel } from './data/challenges'
+import { CHALLENGES, difficultyLabel } from './data/challenges'
 import type { Difficulty } from './data/challenges'
 import { useCamera } from './hooks/useCamera'
 import { ServerJevClient, ResponseValidationError, fetchJevAvailability } from './services/jev'
@@ -592,7 +592,7 @@ function App() {
               </label>
             ))}
           </fieldset>
-          <p className="jvq-setup-note">{ROUND_LENGTH} random missions per quest. 150 challenges to explore. No repeats within a quest.</p>
+          <p className="jvq-setup-note">{ROUND_LENGTH} random missions per quest. {CHALLENGES.length.toLocaleString()} challenges to explore. No repeats within a quest.</p>
           <button className="btn btn-primary" disabled={!hasConsent} onClick={startGame} type="button">
             Start quest
           </button>
@@ -646,15 +646,6 @@ function App() {
             </div>
 
             <div className="jvq-actions">
-              <button
-                className="btn btn-primary btn-block jvq-investigate"
-                disabled={busy || !cameraConnected || !jevReady}
-                onClick={investigateFromCamera}
-                type="button"
-              >
-                <SearchIcon />
-                {busy ? 'Analyzing…' : 'Investigate'}
-              </button>
               <div className="jvq-actions-row">
                 <button
                   className="btn btn-secondary"
@@ -757,6 +748,21 @@ function App() {
                 playsInline
                 ref={cameraVideoRef}
               />
+
+              {cameraConnected && !frame && !isRequestingCamera && investigation.status !== 'camera-error' && (
+                <div className="jvq-capture-controls">
+                  <button
+                    className="jvq-investigate"
+                    disabled={busy || !jevReady}
+                    onClick={investigateFromCamera}
+                    title={jevReady ? 'Capture a photo and investigate' : 'Jev is offline'}
+                    type="button"
+                  >
+                    <span className="jvq-shutter" aria-hidden="true"><CameraIcon size={26} /></span>
+                    <span>{busy ? 'Analyzing…' : 'Investigate'}</span>
+                  </button>
+                </div>
+              )}
 
               {showIdleOverlay && (
                 <div className="jvq-overlay jvq-fade">
