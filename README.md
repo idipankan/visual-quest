@@ -40,7 +40,7 @@ In production the same Express process also serves the built frontend (`dist/`),
 | [src/data/challenges.ts](src/data/challenges.ts) | Challenge catalogue (the server only accepts known `challengeId`s) |
 | [src/config.ts](src/config.ts) | Model, presence threshold, mirroring configuration |
 | [vite.config.js](vite.config.js) | React plugin; proxies `/api` to the local backend in dev |
-| [Dockerfile](Dockerfile) | Container image for Azure Container Apps / App Service |
+| [Dockerfile](Dockerfile) | Container image for Azure Container Apps |
 | [.env.example](.env.example) | Template for local secrets |
 
 ## Run locally
@@ -81,44 +81,11 @@ npm start          # serves dist/ and /api from one process (set TYPESAFE_API_KE
 | `JEV_RATE_LIMIT_PER_MINUTE` | no | `20` | Per-IP analysis requests per minute (in-memory, per instance) |
 | `TYPESAFE_API_URL` | no | `https://api.typesafe.ai/v1/systemone` | Override upstream endpoint |
 
-## Deploy to Azure
-
-Never put the key in the repository, the Dockerfile, or a frontend build variable. Store it as a secret/app setting.
-
-### Option A: Azure Container Apps (container)
-
-```powershell
-$RG = "jev-rg"; $ENV = "jev-env"; $APP = "jev-vision-quest"; $ACR = "<your-unique-acr-name>"
-az group create -n $RG -l westeurope
-az acr create -n $ACR -g $RG --sku Basic
-az acr build -r $ACR -t jev-vision-quest:1 .
-az containerapp env create -n $ENV -g $RG -l westeurope
-
-az containerapp create -n $APP -g $RG --environment $ENV `
-  --image "$ACR.azurecr.io/jev-vision-quest:1" `
-  --registry-server "$ACR.azurecr.io" --registry-identity system `
-  --target-port 8080 --ingress external `
-  --secrets typesafe-api-key="<your-typesafe-key>" `
-  --env-vars TYPESAFE_API_KEY=secretref:typesafe-api-key
-```
-
-Rotate the key with `az containerapp secret set -n $APP -g $RG --secrets typesafe-api-key=<new>` and then create a new revision (`az containerapp update ...`), because secret changes do not apply to running revisions. For stronger handling, reference an Azure Key Vault secret using the app's managed identity.
-
-### Option B: Azure App Service (Linux)
-
-Step-by-step guide, including GitHub Actions auto-deploy on every push: **[docs/DEPLOY_APP_SERVICE.md](docs/DEPLOY_APP_SERVICE.md)**. In short: create a Linux Node 22 App Service, set the `TYPESAFE_API_KEY` app setting, set the startup command to `node dist-server/index.js`, and connect the repo; the workflow in [.github/workflows/azure-app-service.yml](.github/workflows/azure-app-service.yml) builds and deploys it. (App Service does not build this app from a bare repo on its own.) You can alternatively deploy the same container image from Option A.
-
-### Verify
-
-```powershell
-curl https://<your-app-host>/api/health   # {"jevConfigured":true}
-```
-
 ## Security and abuse notes
 
 - The browser sends only an image and a `challengeId`. The server owns the prompts, model, headers, and key, and rejects unknown challenges, non-JPG/PNG uploads, and images over 12 MiB.
 - The key is never logged or returned. Errors to the browser are generic.
-- Anyone who can open the site can spend your TypeSafe quota. The built-in limiter is a small in-memory per-IP guard (it resets on restart and is per instance). Before public use, add authentication (App Service/Container Apps built-in auth), a shared rate limiter or gateway (e.g. Azure API Management/Front Door), monitoring, and TypeSafe budget alerts.
+- Anyone who can open the site can spend your TypeSafe quota. The built-in limiter is a small in-memory per-IP guard (it resets on restart and is per instance). Before public use, add authentication (Container Apps built-in auth), a shared rate limiter or gateway (e.g. Azure API Management/Front Door), monitoring, and TypeSafe budget alerts.
 - Images are held in server memory only for the duration of the request and are not written to disk or logged by this app.
 
 ## Privacy
