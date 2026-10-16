@@ -18,6 +18,8 @@ The catalogue spans household objects, stationery, food, clothing, plants, craft
 
 The selected challenges stay fixed during the quest, including retries and skips. Skipping consumes one of the 10 missions. Reset or play again returns to mode selection; starting draws a fresh set (challenges may recur across separate quests). Final score limits and ranks use only the selected quest's challenges. The server validates every submitted challenge ID against the same full catalogue.
 
+Every completed quest, including a zero-score quest, gets a postcard showing the score, maximum possible score, rank, mode, and mission count. **Share postcard** opens the device's native share sheet when image-file sharing is supported; otherwise it downloads the PNG with an explanatory message. **Download PNG** saves the same 1200 x 800 image directly. Postcards are generated locally in the browser and contain no captured or uploaded photos. Cancelling the share sheet leaves the result unchanged; export or sharing errors are shown with retry/download options.
+
 The app is a React frontend plus a small Node/Express backend. **The TypeSafe API key lives only on the server**, read from the `TYPESAFE_API_KEY` environment variable. The browser never sees it.
 
 ```text

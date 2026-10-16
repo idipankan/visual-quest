@@ -21,6 +21,7 @@ import { toBoxPercentages } from './utils/boxCoordinates'
 import { calculatePoints, evaluatePresence } from './utils/scoring'
 import { createRound, GAME_MODES, maximumRoundScore, ROUND_LENGTH } from './utils/gameRound'
 import type { GameMode } from './utils/gameRound'
+import { ResultPostcard } from './components/ResultPostcard'
 import {
   JEV_MODEL,
   MIRROR_CAPTURED_FRAME,
@@ -602,18 +603,14 @@ function App() {
           <div className="jvq-end-kicker">Quest complete</div>
           <h1>Nice work, detective.</h1>
           <p className="text-muted">You explored every mission. Here&rsquo;s how your eye for everyday objects measures up.</p>
-          <div className="jvq-end-cards">
-            <div className="jvq-end-card">
-              <div className="jvq-kicker">Total score</div>
-              <div className="jvq-end-total">{score.toLocaleString('en-US')}</div>
-              <small className="text-muted">of {maxScore.toLocaleString('en-US')} possible</small>
-            </div>
-            <div className="jvq-end-card jvq-end-card--rank">
-              <div className="jvq-kicker">Quest rank</div>
-              <div className="jvq-end-rank">{rank.rank}</div>
-              <small className="text-muted">{rank.blurb}</small>
-            </div>
-          </div>
+          <ResultPostcard
+            score={score}
+            maxScore={maxScore}
+            rank={rank.rank}
+            blurb={rank.blurb}
+            mode={mode === 'progressive' ? 'Progressive' : difficultyLabel(mode)}
+            missions={round.length}
+          />
           <button className="btn btn-primary" onClick={resetGame} type="button">
             <ResetIcon size={17} />
             Play again
